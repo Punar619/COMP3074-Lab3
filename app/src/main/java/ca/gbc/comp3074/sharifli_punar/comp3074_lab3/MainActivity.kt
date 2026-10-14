@@ -3,85 +3,113 @@ package ca.gbc.comp3074.sharifli_punar.comp3074_lab3
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import ca.gbc.comp3074.sharifli_punar.comp3074_lab3.data.Customer
 import ca.gbc.comp3074.sharifli_punar.comp3074_lab3.ui.theme.COMP3074_Lab3Theme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             COMP3074_Lab3Theme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Conversation(
-                        messages = SampleData.conversationSample,
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    CustomerScreen()
                 }
             }
         }
     }
 }
 
-data class Message(val author: String, val body: String)
-
 @Composable
-fun MessageCard(msg: Message) {
-    Row(modifier = Modifier.padding(all = 8.dp)) {
-        Image(
-            painter = painterResource(R.drawable.ic_launcher_foreground),
-            contentDescription = "Contact profile picture",
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
+fun CustomerScreen(viewModel: CustomerViewModel = viewModel()) {
+    val customers by viewModel.allCustomers.collectAsState()
 
-        Column {
-            Text(text = msg.author, style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(4.dp))
-            Surface(
-                shape = MaterialTheme.shapes.medium,
-                tonalElevation = 1.dp
-            ) {
-                Text(
-                    text = msg.body,
-                    modifier = Modifier.padding(all = 4.dp),
-                    style = MaterialTheme.typography.bodyMedium
-                )
+    var name by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(text = "Customer Manager (Lab 4)", style = MaterialTheme.typography.headlineMedium)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Customer Name") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = age,
+            onValueChange = { age = it },
+            label = { Text("Age") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                if (name.isNotBlank() && age.isNotBlank()) {
+                    val newCustomer = Customer(
+                        name = name,
+                        age = age.toIntOrNull() ?: 0,
+                        isActive = true
+                    )
+                    viewModel.insert(newCustomer)
+                    name = ""
+                    age = ""
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Add Customer")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(customers) { customer ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(text = customer.name, style = MaterialTheme.typography.titleMedium)
+                            Text(text = "Age: ${customer.age}", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Button(onClick = { viewModel.delete(customer) }) {
+                            Text("Delete")
+                        }
+                    }
+                }
             }
         }
     }
-}
-
-@Composable
-fun Conversation(messages: List<Message>, modifier: Modifier = Modifier) {
-    LazyColumn(modifier = modifier) {
-        items(messages) { message ->
-            MessageCard(message)
-        }
-    }
-}
-
-object SampleData {
-    val conversationSample = listOf(
-        Message("Joe", "Hi!"),
-        Message("Jim", "How are you?"),
-        Message("Joe", "Test..1..2...3"),
-        Message("Joe", "I hate coding!!!"),
-        Message("Joe", "Hi!"),
-        Message("Jim", "How are you?"),
-        Message("Joe", "Test..1..2...3")
-    )
 }
